@@ -86,14 +86,14 @@ def get_contractions():
 def format_contractions(dates) -> str:
     for date1, date2 in zip_longest(dates, dates[1:]):
         if not date2:
-            yield date1
+            yield date1.ljust(28)
         else:
             d1 = datetime.strptime(date1, FMT)
             d2 = datetime.strptime(date2, FMT)
             d1_ts = time.mktime(d1.timetuple())
             d2_ts = time.mktime(d2.timetuple())
             diff = round((d1_ts - d2_ts) / 60)
-            yield f"{date1} ({diff} min)"
+            yield f"{date1} ({diff:2} min)".ljust(28)
 
 
 def ensure_db_exists():
