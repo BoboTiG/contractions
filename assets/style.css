@@ -6,4 +6,5 @@ body {
 input {
     width: 50%;
     padding: 1em;
+    font-size: 150%;
 }
