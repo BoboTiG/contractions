@@ -41,6 +41,13 @@ def send_static(filename):
     return static_file(filename, root="assets")
 
 
+@route("/<filename:path>")
+def send_static(filename):
+    """ Get a resource file used by the website. """
+
+    return static_file(filename, root=".")
+
+
 @route("/")
 def index():
     return render("tpl/index", history=get_contractions())
