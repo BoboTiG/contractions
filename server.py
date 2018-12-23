@@ -1,5 +1,4 @@
 import time
-import locale
 import os.path
 import sqlite3
 
@@ -17,6 +16,10 @@ and that both that copyright notice and this permission notice appear
 in supporting documentation or portions thereof, including
 modifications, that you make.
 """
+
+# Specific to Samuel, need to adapt later
+DB_FILE = "databases/contractions-samuel.db"
+PORT = 2018
 
 
 def render(tpl, **kwargs):
@@ -50,8 +53,7 @@ def index():
 
 
 def add_contraction():
-    db = "databases/contractions.db"
-    conn = sqlite3.connect(f"file:{db}", uri=True)
+    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
     c = conn.cursor()
     c.execute("INSERT INTO Contractions (quand) VALUES (datetime('now', 'localtime'))")
     conn.commit()
@@ -59,8 +61,7 @@ def add_contraction():
 
 
 def get_contractions():
-    db = "databases/contractions.db"
-    conn = sqlite3.connect(f"file:{db}", uri=True)
+    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
     c = conn.cursor()
     data = c.execute("SELECT quand FROM Contractions").fetchall()
     res = "\n".join(d[0] for d in reversed(data))
@@ -73,17 +74,16 @@ def main():
     """ Main logic. """
 
     schema_new_dtb = None
-    db = "databases/contractions.db"
-    if not os.path.isfile(db):
+    if not os.path.isfile(DB_FILE):
         with open("schemas/contractions.sql") as filei:
             schema_new_dtb = filei.read()
-        conn = sqlite3.connect(f"file:{db}", uri=True)
+        conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
         c = conn.cursor()
         c.executescript(schema_new_dtb)
         conn.commit()
         conn.close()
 
-    run(host="", port=8888, reloader=True)
+    run(host="", port=PORT, reloader=True)
 
 
 if __name__ == "__main__":
