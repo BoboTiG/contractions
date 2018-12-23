@@ -1,6 +1,8 @@
 import time
 import os.path
 import sqlite3
+from datetime import datetime
+from itertools import zip_longest
 
 from bottle import redirect, route, run, static_file, template
 
@@ -18,6 +20,7 @@ modifications, that you make.
 """
 
 DB_SCHEMA = "contractions.sql"
+FMT = "%Y-%m-%d %H:%M:%S"
 
 # Specific to Samuel, need to adapt later
 DB_FILE = "contractions-samuel.db"
@@ -65,11 +68,25 @@ def get_contractions():
 
     conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
     c = conn.cursor()
-    data = c.execute("SELECT quand FROM Contractions").fetchall()
-    res = "\n".join(d[0] for d in reversed(data))
+    dates = c.execute("SELECT quand FROM Contractions").fetchall()
+    dates = [d[0] for d in reversed(dates)]
+    res = "\n".join(format_contractions(dates))
     conn.commit()
     conn.close()
     return res
+
+
+def format_contractions(dates) -> str:
+    for date1, date2 in zip_longest(dates, dates[1:]):
+        if not date2:
+            yield date1
+        else:
+            d1 = datetime.strptime(date1, FMT)
+            d2 = datetime.strptime(date2, FMT)
+            d1_ts = time.mktime(d1.timetuple())
+            d2_ts = time.mktime(d2.timetuple())
+            diff = round((d1_ts - d2_ts) / 60)
+            yield f"{date1} ({diff} min)"
 
 
 def ensure_db_exists():
