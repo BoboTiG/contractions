@@ -17,8 +17,10 @@ in supporting documentation or portions thereof, including
 modifications, that you make.
 """
 
+DB_SCHEMA = "contractions.sql"
+
 # Specific to Samuel, need to adapt later
-DB_FILE = "databases/contractions-samuel.db"
+DB_FILE = "contractions-samuel.db"
 PORT = 2018
 
 
@@ -29,30 +31,28 @@ def render(tpl, **kwargs):
     return template(tpl, **kwargs)
 
 
-@route('/assets/<filename:path>')
+@route("/assets/<filename:path>")
 def send_static(filename):
     """ Get a resource file used by the website. """
 
-    return static_file(filename, root='assets')
+    return static_file(filename, root="assets")
 
 
 @route("/")
 def index():
-    """ Display the home page showing N randoms books. """
-
     return render("tpl/index", history=get_contractions())
 
 
 @route("/add")  # noqa
 def index():
-    """ Display the home page showing N randoms books. """
-
     add_contraction()
     time.sleep(1)
     redirect("/")
 
 
 def add_contraction():
+    ensure_db_exists()
+
     conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
     c = conn.cursor()
     c.execute("INSERT INTO Contractions (quand) VALUES (datetime('now', 'localtime'))")
@@ -61,6 +61,8 @@ def add_contraction():
 
 
 def get_contractions():
+    ensure_db_exists()
+
     conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
     c = conn.cursor()
     data = c.execute("SELECT quand FROM Contractions").fetchall()
@@ -70,18 +72,21 @@ def get_contractions():
     return res
 
 
+def ensure_db_exists():
+    if os.path.isfile(DB_FILE):
+        return
+
+    with open(DB_SCHEMA) as filei:
+        schema_new_dtb = filei.read()
+    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
+    c = conn.cursor()
+    c.executescript(schema_new_dtb)
+    conn.commit()
+    conn.close()
+
+
 def main():
     """ Main logic. """
-
-    schema_new_dtb = None
-    if not os.path.isfile(DB_FILE):
-        with open("schemas/contractions.sql") as filei:
-            schema_new_dtb = filei.read()
-        conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
-        c = conn.cursor()
-        c.executescript(schema_new_dtb)
-        conn.commit()
-        conn.close()
 
     run(host="", port=PORT, reloader=True)
 
