@@ -3,13 +3,14 @@ import os.path
 import sqlite3
 from datetime import datetime
 from itertools import zip_longest
+from typing import Iterator
 
 from bottle import redirect, route, run, static_file, template
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Mickaël Schoentgen"
 __copyright__ = """
-Copyright (c) 2018, Mickaël 'Tiger-222' Schoentgen
+Copyright (c) 2018-2024, Mickaël 'Tiger-222' Schoentgen
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee or royalty is hereby
@@ -24,6 +25,7 @@ FMT = "%Y-%m-%d %H:%M:%S"
 
 # Specific to Samuel, need to adapt later
 DB_FILE = "contractions-samuel.db"
+HOST = "0.0.0.0"
 PORT = 2018
 
 
@@ -83,7 +85,7 @@ def get_contractions():
     return res
 
 
-def format_contractions(dates) -> str:
+def format_contractions(dates) -> Iterator[str]:
     for date1, date2 in zip_longest(dates, dates[1:]):
         if not date2:
             yield date1.ljust(28)
@@ -112,7 +114,7 @@ def ensure_db_exists():
 def main():
     """ Main logic. """
 
-    run(host="", port=PORT, reloader=True)
+    run(host=HOST, port=PORT, reloader=True)
 
 
 if __name__ == "__main__":
