@@ -5,7 +5,18 @@
 	<meta name="description" content="Contractions">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link href="/favicon.ico" rel="icon" type="image/x-icon">
-	<link rel="stylesheet" href="/assets/style.css?v=1">
+	<style>
+		body {
+			text-align: center;
+			padding: 1em;
+			font-size: 150%;
+		}
+		input {
+			width: 50%;
+			padding: 1em;
+			font-size: 150%;
+		}
+	</style>
 </head>
 <body>
 	<form action="/add">

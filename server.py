@@ -1,16 +1,16 @@
 import time
-import os.path
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from itertools import zip_longest
+from pathlib import Path
 from typing import Iterator
 
-from bottle import redirect, route, run, static_file, template
+import bottle  # type: ignore[import-untyped]
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Mickaël Schoentgen"
-__copyright__ = """
-Copyright (c) 2018-2024, Mickaël 'Tiger-222' Schoentgen
+__copyright__ = f"""
+Copyright (c) 2018-2025, {__author__}
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee or royalty is hereby
@@ -20,101 +20,77 @@ in supporting documentation or portions thereof, including
 modifications, that you make.
 """
 
-DB_SCHEMA = "contractions.sql"
-FMT = "%Y-%m-%d %H:%M:%S"
-
-# Specific to Samuel, need to adapt later
-DB_FILE = "contractions-samuel.db"
 HOST = "0.0.0.0"
-PORT = 2018
+PORT = time.gmtime().tm_year
+
+ROOT = Path(__file__).parent
+DB_SCHEMA = ROOT / "contractions.sql"
+DB_FILE = ROOT / "contractions.db"
+DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
 
-def render(tpl, **kwargs):
-    """ Call template() with several common variables. """
-
+def render(tpl: str, **kwargs: str) -> str:
     kwargs["version"] = __version__
-    return template(tpl, **kwargs)
+    return bottle.template(tpl, **kwargs)
 
 
-@route("/assets/<filename:path>")
-def send_static(filename):
-    """ Get a resource file used by the website. """
-
-    return static_file(filename, root="assets")
-
-
-@route("/<filename:path>")
-def send_static(filename):
-    """ Get a resource file used by the website. """
-
-    return static_file(filename, root=".")
-
-
-@route("/")
-def index():
+@bottle.route("/")
+def home() -> str:
     return render("tpl/index", history=get_contractions())
 
 
-@route("/add")  # noqa
-def index():
+@bottle.route("/add")
+def new_contraction() -> None:
     add_contraction()
     time.sleep(1)
-    redirect("/")
+    bottle.redirect("/")
 
 
-def add_contraction():
+def add_contraction() -> None:
     ensure_db_exists()
 
-    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
-    c = conn.cursor()
-    c.execute("INSERT INTO Contractions (quand) VALUES (datetime('now', 'localtime'))")
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute(
+            "INSERT INTO Contractions (quand) VALUES (datetime('now', 'localtime'))"
+        )
 
 
-def get_contractions():
+def get_contractions() -> str:
     ensure_db_exists()
 
-    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
-    c = conn.cursor()
-    dates = c.execute("SELECT quand FROM Contractions").fetchall()
+    with sqlite3.connect(DB_FILE) as conn:
+        dates = conn.execute("SELECT quand FROM Contractions").fetchall()
     dates = [d[0] for d in reversed(dates)]
-    res = "\n".join(format_contractions(dates))
-    conn.commit()
-    conn.close()
-    return res
+    return "\n".join(format_contractions(dates))
 
 
-def format_contractions(dates) -> Iterator[str]:
+def format_contractions(dates: list[str]) -> Iterator[str]:
     for date1, date2 in zip_longest(dates, dates[1:]):
         if not date2:
             yield date1.ljust(28)
         else:
-            d1 = datetime.strptime(date1, FMT)
-            d2 = datetime.strptime(date2, FMT)
+            d1 = datetime.strptime(date1, DATE_FMT)
+            d2 = datetime.strptime(date2, DATE_FMT)
             d1_ts = time.mktime(d1.timetuple())
             d2_ts = time.mktime(d2.timetuple())
-            diff = round((d1_ts - d2_ts) / 60)
-            yield f"{date1} ({diff:2} min)".ljust(28)
+            diff = timedelta(seconds=d1_ts - d2_ts)
+            yield f"{date1} ({str(diff).removeprefix('0:').lstrip('0').rjust(5)})".ljust(
+                28
+            )
 
 
-def ensure_db_exists():
-    if os.path.isfile(DB_FILE):
+def ensure_db_exists() -> None:
+    if DB_FILE.is_file():
         return
 
-    with open(DB_SCHEMA) as filei:
-        schema_new_dtb = filei.read()
-    conn = sqlite3.connect(f"file:{DB_FILE}", uri=True)
-    c = conn.cursor()
-    c.executescript(schema_new_dtb)
-    conn.commit()
-    conn.close()
+    schema_new_dtb = DB_SCHEMA.read_text()
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.executescript(schema_new_dtb)
 
 
-def main():
-    """ Main logic. """
-
-    run(host=HOST, port=PORT, reloader=True)
+def main() -> int:
+    bottle.run(host=HOST, port=PORT, reloader=True)
+    return 0
 
 
 if __name__ == "__main__":
